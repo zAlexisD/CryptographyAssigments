@@ -1,0 +1,246 @@
+// Combinatorics Cryptography - Magma Assignment 04
+// Alexis DOAN
+
+load "assignment4_variablesV2.magma";
+
+// Task 1 : simplified GOST encryption
+
+// The function takes as input a 32-bits message m € VectorSpace(GF(2),32)
+// All round keys are set to zero so no key addition in the F function
+// The number of rounds is reduced to 12
+
+// For convience we will set name variable for the Vector Spaces
+V32 := VectorSpace(GF(2),32);
+V16 := VectorSpace(GF(2),16);
+V4 := VectorSpace(GF(2),4);
+
+function GOSTencrypt(m)
+	// Make sure m is in the right format
+	m := V32!m;
+
+	// Separate m in two 16-bits vectors by extracting the upper and lower 16 bits
+	mL := V16![m[i] : i in [1..16]];
+	mR := V16![m[i] : i in [17..32]];
+
+	// Apply the modified F function on 12 rounds
+	for round in [1..12] do 
+		// Save initial values for the reassignment
+		mL1 := mL;
+		mR1 := mR;
+
+		// The 4 S-boxes provided work on 4-bits elements so we will split mR1 in 4
+		mR1_s0 := V4![mR1[i] : i in [1..4]];
+		mR1_s1 := V4![mR1[i] : i in [5..8]];
+		mR1_s2 := V4![mR1[i] : i in [9..12]];
+		mR1_s3 := V4![mR1[i] : i in [13..16]];
+
+		// Apply the S-box on each part
+		mR1_s0 := S(mR1_s0);
+		mR1_s1 := S(mR1_s1);
+		mR1_s2 := S(mR1_s2);
+		mR1_s3 := S(mR1_s3);
+
+		// Concatenate the new values in one vector
+		mR2_1 := [mR1_s0[i] : i in [1..4]] cat [mR1_s1[i] : i in [1..4]];
+		mR2_2 := [mR1_s2[i] : i in [1..4]] cat [mR1_s3[i] : i in [1..4]];
+		mR2 := mR2_1 cat mR2_2;
+
+		// Rotate by shifting to the right of 3 values
+		// The Rotation function works on sequences, that's why we don't convert yet in the previous step
+		// Then we apply the rotation and convert it back in vector
+		mR2 := V16!Rotate(mR2,3);
+
+		// Reassign to mL and mR their new values
+		mL := mR1;
+		// In VectorSpace(GF(2),16), the XOR is equivalent to a simple "+"
+		mR := mR2 + mL1;
+
+	end for;
+
+	// Now concatenate the final values of mL and mR to get the encryption c
+	c := V32!([mL[i] : i in [1..16]] cat [mR[j] : j in [1..16]]);
+
+	return c;
+
+end function;
+
+// Task 2 : Saarinen's attack
+
+// The round key being set to zero, the 1st setting is already done
+
+// For the 2nd setting, we will find the y in V16 such that S(0) = y, i.e.:
+	// if GOSTencrypt(0_32) returns a c = (mcL,mcR), then GOSTencrypt(y_32) returns a cy = (myL,myR)
+	// such that myR = mcL (condition (*)), with y_32 = (y,0_16);
+
+	// For that we will try bruteforcing by testing with every elements of V16 
+	// It will have a quite high complexity (2^16 = 65536 elements)
+
+	// Moreover, with such a condition (*), we can find various values of y possible
+	// We will store them in a list and make various tests
+
+	// Let's define the list of elements in V16 first
+	// = vectors corresponding to 0 to 2^16 - 1 = 65535 in binary
+	// Intseq(a,b,c) returns the number a in base b on c bits as a sequence 
+	// Note that Intseq returns a sequence ordered in "Little Endian" so we need to Reverse it
+vect16bits := [V16!Reverse(Intseq(i,2,16)) : i in [0..65535]];
+
+	// Now let's define a function finding the value(s) satisfaying condition (*)
+	// we write a function because it will be useful for the 3rd setting later
+
+function FindValueBF(a)
+	// We first need to convert this number in binary to make it a 16-bits vector
+	// Then fill on the right with 16 "0" to have a 32-bits vector
+	a16 := V16!Reverse(Intseq(a,2,16));
+	a32 := V32!([a16[i] : i in [1..16]] cat [0*i : i in [1..16]]);
+
+	// Apply GOSTencrypt as a black box and split it in two (no need of cR actually)
+	c := GOSTencrypt(a32);
+	cL := V16![c[i] : i in [1..16]];
+
+	// Now we will try to find the y that satisfies (*)
+	sol := [];
+	for y in vect16bits do 
+		y32 := V32!([y[i] : i in [1..16]] cat [a16[i] : i in [1..16]]);
+		my := GOSTencrypt(y32);
+		myR := V16![my[i] : i in [17..32]];
+		if myR eq cL then 
+			sol cat:= [y];
+		end if;
+	end for;
+
+	return sol;
+
+end function;
+
+	// Now that we have the possible values, we apply the inverse rotation to retrieve a vector Zy
+	// The 4 S-boxes being all the same, we should have Zy = (z,z,z,z)
+	// We will write a function that returns the remaining possible value for y.
+
+function ValidValue(sol)
+	validsol := [];
+	for y in sol do 
+		ylist := Eltseq(y);
+		Zy := Rotate(ylist,-3);
+
+		Zy0 := [Zy[i] : i in [1..4]];
+		Zy1 := [Zy[i] : i in [5..8]];
+		Zy2 := [Zy[i] : i in [9..12]];
+		Zy3 := [Zy[i] : i in [13..16]];
+
+		if (Zy0 eq Zy1) and (Zy0 eq Zy2) and (Zy0 eq Zy3) then
+			validsol cat:= [V16!Zy];
+		end if;
+	end for;
+
+	return validsol;
+
+end function;
+
+// So now We can try to find the right y 
+solution := FindValueBF(0);
+validsolution := ValidValue(solution);
+
+// With this I find 
+	// solution = 
+	//[
+	//    (0 1 1 1 1 0 0 1 0 1 1 1 1 0 0 1),
+	//    (1 0 0 1 0 1 1 1 1 0 0 1 0 1 1 1),
+	//    (1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 0)
+	//]
+	// validsolution = 
+	//[
+	//    (0 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1)
+	//]
+	// So we have S(0_4) = (0 1 1 1)
+
+// Now, for the 3rd setting we will apply the Slide attack on S_0 only
+// The S-boxes being the same, we don't need to attack the others boxes as we should get the same value
+// This will drastically reduce the complexity
+	// So for this, we define a 16-bit vector a:=(u,0_4,0_4,0_4)
+	// with u being the remaining values between 1 and 15(F) in V4
+	// We will then apply the same FindValueBF on a to find possible values for a vector b
+	// Then, we apply the inverse rotation on b to find a vector of the form (v,z,z,z)
+	// z being the value for S(0) that we found : (0111)
+	// And v will therefore be the matching value for S(u)
+
+
+// Let's write a function to retrieve v
+function FindV(sol)
+	valid := [];
+	z := [0,1,1,1];
+	for b in sol do 
+		bseq := Eltseq(b);
+		bRot := Rotate(bseq,-3);
+
+		v := [bRot[i] : i in [1..4]];
+		b1 := [bRot[i] : i in [5..8]];
+		b2 := [bRot[i] : i in [9..12]];
+		b3 := [bRot[i] : i in [13..16]];
+
+		if (b1 eq z) and (b2 eq z) and (b3 eq z) then 
+			valid cat:= [V4!v];
+		end if;
+	end for;
+
+	return valid;
+
+end function;
+
+// Finally a function to retrieve the different S(u)
+function FindSBox()
+	vlist := [];
+	for u in [1..15] do 
+		// Convert u in binary and fill with zeros on the right
+		u4 := Reverse(Intseq(u,2,4));
+		aseq := [u4[i] : i in [1..4]] cat [0*i : i in [1..12]];
+		// Convert the sequence in decimal to adapt with my FindValueBF function
+		a := Seqint(Reverse(aseq),2);
+		// Apply the "Oracle"
+		sol := FindValueBF(a);
+		v := FindV(sol);
+		// Convert the solution vector in decimal
+		vdec := Seqint(Reverse([Integers()!v[1][i] : i in [1..4]]),2);
+		printf"For u = %o, we find S%o = %o ie %o\n",u,V4!u4,v[1],vdec;
+		vlist cat:= [v[1]];
+	end for;
+
+	return vlist;
+
+end function;
+
+FindSBox();
+
+// It takes a few time but in the end we have : 
+
+// For u = 1, we find S(0 0 0 1) = (1 1 1 0) ie 14
+// For u = 2, we find S(0 0 1 0) = (0 1 0 1) ie 5
+// For u = 3, we find S(0 0 1 1) = (1 0 0 1) ie 9
+// For u = 4, we find S(0 1 0 0) = (1 1 0 1) ie 13
+// For u = 5, we find S(0 1 0 1) = (0 1 1 0) ie 6
+// For u = 6, we find S(0 1 1 0) = (0 0 0 0) ie 0
+// For u = 7, we find S(0 1 1 1) = (0 0 1 1) ie 3
+// For u = 8, we find S(1 0 0 0) = (1 0 0 0) ie 8
+// For u = 9, we find S(1 0 0 1) = (1 0 1 0) ie 10
+// For u = 10, we find S(1 0 1 0) = (0 0 0 1) ie 1
+// For u = 11, we find S(1 0 1 1) = (1 1 0 0) ie 12
+// For u = 12, we find S(1 1 0 0) = (1 1 1 1) ie 15
+// For u = 13, we find S(1 1 0 1) = (1 0 1 1) ie 11
+// For u = 14, we find S(1 1 1 0) = (0 0 1 0) ie 2
+// For u = 15, we find S(1 1 1 1) = (0 1 0 0) ie 4
+// [
+//     (1 1 1 0),
+//     (0 1 0 1),
+//     (1 0 0 1),
+//     (1 1 0 1),
+//     (0 1 1 0),
+//     (0 0 0 0),
+//     (0 0 1 1),
+//     (1 0 0 0),
+//     (1 0 1 0),
+//     (0 0 0 1),
+//     (1 1 0 0),
+//     (1 1 1 1),
+//     (1 0 1 1),
+//     (0 0 1 0),
+//     (0 1 0 0)
+// ]

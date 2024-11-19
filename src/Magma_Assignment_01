@@ -1,0 +1,189 @@
+// Combinatorics Cryptography - Magma Assignment 01
+// Alexis DOAN
+
+// Task 1
+function pPart(p,n)
+
+	// Check that p is a prime
+	if not IsPrime(p) then 
+		printf"%o is not a prime, try again\n",p;
+		return 0;
+	end if;
+
+	// Case n = 0
+	if n eq 0 then
+		printf"Second argument n = 0\n";
+		printf"Returned value : %o\n",n;
+		return n;
+	end if;
+	
+	// Initiate output value k
+	k := 0;
+
+	// Compute Euclidean division of n by p
+	quotient,remainder := Quotrem(n,p);
+
+	// Case p does not divide n
+	if remainder ne 0 then 
+		printf"%o does not divide %o\n",p,n;
+		printf"Returned value : %o\n",k;
+		return k;
+	// Case p^t divides n but p^t+1 does not
+	else
+		while remainder eq 0 do
+			k := k + 1;
+			power_p := p^k;
+			quotient,remainder := Quotrem(n,power_p);
+		end while;
+		printf"The greatest power of %o such that %o^pPart(%o,%o) divides %o is %o\n",p,p,p,n,n,k-1;
+		return k-1;
+	end if;
+
+end function;
+
+// Task 1 copy past version
+function pPart(p,n)
+	if not IsPrime(p) then 
+		printf"%o is not a prime, try again\n",p;
+		return 0;
+	end if;
+	if n eq 0 then
+		printf"Second argument n = 0\n";
+		printf"Returned value : %o\n",n;
+		return n;
+	end if;
+	k := 0;
+	quotient,remainder := Quotrem(n,p);
+	if remainder ne 0 then 
+		printf"%o does not divide %o\n",p,n;
+		printf"Returned value : %o\n",k;
+		return k;
+	else
+		while remainder eq 0 do
+			k := k + 1;
+			power_p := p^k;
+			quotient,remainder := Quotrem(n,power_p);
+		end while;
+		printf"The greatest power of %o such that %o^pPart(%o,%o) divides %o is %o\n",p,p,p,n,n,k-1;
+		return k-1;
+	end if;
+end function;
+
+// --------------------------------------------------------------------------------------------
+
+// Task 2
+
+function binaryGCD(a,b)
+	// To simplify we want |a| > |b|
+	aa := a;
+	bb := b;
+	if Abs(a) lt Abs(b) then
+		a := bb;
+		b := aa;
+	end if;
+
+	// Let us define the conditions to end the recursive function
+	// We assume that at some point, we will always be in one of these 3 cases
+
+	// Case a or b equals 0 -> gcd(0,n)=n
+	if a eq 0 then 
+		printf"binaryGCD(%o,%o) = %o\n",aa,bb,Abs(b);
+		return Abs(b);
+	elif b eq 0 then 
+		printf"binaryGCD(%o,%o) = %o\n",aa,bb,Abs(a);
+		return Abs(a);
+
+	// Case a or b equals 1 -> gcd(n,1)=1
+	elif Abs(a) eq 1 or Abs(b) eq 1 then
+		printf"binaryGCD(%o,%o) = 1\n",aa,bb;
+		return 1;
+
+	// Case b divides a -> |b| would be the gcd of a and b
+	elif a mod b eq 0 then 
+		printf"binaryGCD(%o,%o) = %o\n",aa,bb,Abs(b);
+		return Abs(b);
+	end if;
+
+	// Let us treat the special case a,b both even (assuming b does not divide a)
+	// The idea would be to do a "manual factorisation" using pPart
+	
+	if a mod 2 eq 0 and b mod 2 eq 0 then
+		// Initiate output
+		gcd_even := 1;
+
+		// Define a list of prime numbers (from 1 to max(|a|,|b|) is enough)
+		scale_list := {1..Maximum(Abs(a),Abs(b))};
+		prime_list := {x : x in scale_list | IsPrime(x)};
+
+		// Compute the "manual factorisation"
+		for p in prime_list do
+			a1 := pPart(p,a);
+			b1 := pPart(p,b);
+			gcd_even := gcd_even * p^Minimum(a1,b1);
+		end for;
+		printf"\nbinaryGCD(%o,%o) = %o\n",aa,bb,gcd_even;
+		return gcd_even;
+
+	// Then we apply the gcd-preserving transformation
+
+	// Case a and b both odd
+	elif a mod 2 ne 0 and b mod 2 ne 0 then 
+		a := (a-b) div 2;
+		binaryGCD(a,b);
+
+	// Case a even, b odd
+	elif a mod 2 eq 0 and b mod 2 ne 0 then
+		a := a div 2;
+		binaryGCD(a,b);
+
+	// Case a odd, b even
+	elif a mod 2 ne 0 and b mod 2 eq 0 then
+		b := b div 2;
+		binaryGCD(a,b);
+	end if;
+
+end function;
+
+// Task 2 copy past version
+function binaryGCD(a,b)
+	aa := a;
+	bb := b;
+	if Abs(a) lt Abs(b) then
+		a := bb;
+		b := aa;
+	end if;
+	if a eq 0 then 
+		printf"binaryGCD(%o,%o) = %o\n",aa,bb,Abs(b);
+		return Abs(b);
+	elif b eq 0 then 
+		printf"binaryGCD(%o,%o) = %o\n",aa,bb,Abs(a);
+		return Abs(a);
+	elif Abs(a) eq 1 or Abs(b) eq 1 then
+		printf"binaryGCD(%o,%o) = 1\n",aa,bb;
+		return 1;
+	elif a mod b eq 0 then 
+		printf"binaryGCD(%o,%o) = %o\n",aa,bb,Abs(b);
+		return Abs(b);
+	end if;
+	if a mod 2 eq 0 and b mod 2 eq 0 then
+		gcd_even := 1;
+		scale_list := {1..Maximum(Abs(a),Abs(b))};
+		prime_list := {x : x in scale_list | IsPrime(x)};
+		for p in prime_list do
+			a1 := pPart(p,a);
+			b1 := pPart(p,b);
+			gcd_even := gcd_even * p^Minimum(a1,b1);
+		end for;
+		printf"\nbinaryGCD(%o,%o) = %o\n",aa,bb,gcd_even;
+		return gcd_even;
+	elif a mod 2 ne 0 and b mod 2 ne 0 then 
+		a := (a-b) div 2;
+		binaryGCD(a,b);
+	elif a mod 2 eq 0 and b mod 2 ne 0 then
+		a := a div 2;
+		binaryGCD(a,b);
+	elif a mod 2 ne 0 and b mod 2 eq 0 then
+		b := b div 2;
+		binaryGCD(a,b);
+	end if;
+end function;

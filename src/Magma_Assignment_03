@@ -1,0 +1,44 @@
+// Combinatorics Cryptography - Magma Assignment 03
+// Alexis DOAN
+
+load "assignment3_variables.magma";
+
+cypher_list := [c1,c2,c3,c4];
+mod_list :=[n1,n2,n3,n4];
+
+// We are here in the case of misuse of textbook RSA A.2 where e is too small (e=3)
+// Therefore, it can be quite easy to retrieve the message m
+// We assume that the ni are all coprime (we can easily check that and they are)
+
+// We want to find the x such that ci = x mod ni for 3 cyphertexts among the 4 (x = m^3)
+// In other words, we want the x = c1 mod n1 = c2 mod n2 = c3 mod n3 for example
+// We have to try every combination possible and determine the best one
+
+msg_list :=[];
+name_list := ["c2,c3,c4","c1,c3,c4","c1,c2,c4","c1,c2,c3"];
+
+for ind in [1..#cypher_list] do 
+	// create lists with one (corresponding) element less
+	cypher_list2 := [txt : txt in cypher_list | txt ne cypher_list[ind]];
+	mod_list2 := [n : n in mod_list | n ne mod_list[ind]];
+	// CRT assure the existence of such x modulo n = product of the ni in mod_list2
+	x := CRT(cypher_list2,mod_list2);
+	m := x^(1/3);
+	msg_list cat:= [m];
+end for;
+
+for i in [1..#name_list] do 
+	printf"Case %o : For %o, the supposed message would be m = %o\n",i,name_list[i],msg_list[i];
+end for;
+
+// I obtain these results : 
+// Case 1 : For c2,c3,c4, the supposed message would be m = 424242424242424242424242424242.
+// Case 2 : For c1,c3,c4, the supposed message would be m = 1.19526820279908121073505242969E71
+// Case 3 : For c1,c2,c4, the supposed message would be m = 1.07542739688999951413565270962E71
+// Case 4 : For c1,c2,c3, the supposed message would be m = 2.16656199498080236150318192997E71
+
+// We can notice that for cases 2,3 and 4, the supposed messages are all of order 10^71
+// These values are too high and have too be written with decimals * 10^71 
+// while we obtain a perfect round number for the case 1 
+
+printf"We can assume that m = 424242424242424242424242424242";

@@ -1,0 +1,155 @@
+// Combinatorics Cryptography - Magma Assignment 02
+// Alexis DOAN
+
+// Brute Force dLog
+function BFdLog(g,h,p)
+	g:=Integers(p)!g;
+	ord:=Order(g);
+
+	L:=[g^i : i in [0..ord-1]];
+	x:=Index(L,h);
+
+	if x eq 0 then
+		return false;
+		else return Index(L,h)-1;
+	end if;
+end function;
+
+// dLog using PH1 + PH2
+function mydLog(g,h,p)
+
+	// write g in modulo p form if not already the case
+	g := Integers(p)!g;
+
+	// factorize the cardinal (p-1) of the group assuming g is a generator in Zp*
+	factor := [f[1]^f[2] : f in Factorization(p-1)];
+	f_prime := [f[1] : f in Factorization(p-1)];
+	f_power := [f[2] : f in Factorization(p-1)];
+
+	// define the g_i being the respective generators of H_i (subgroups made of the factorization of p-1)
+	// define first the corresponding powers
+	g_power := [(p-1) div factor[i] : i in [1..#factor]];
+
+	g_list := [g^g_power[i] : i in [1..#g_power]];
+
+	// compute ((g^t)^a,(g^s)^a) = (h^t,h^s)
+	//h_modp := [h^g_power[i] mod p : i in [1..#g_power]];
+	// the previous solution does not work for high values so we need to compute step by step
+	h_modp := [];
+	for power in g_power do 
+		L := [f[1]^f[2] : f in Factorization(power)];
+		hk := h;
+		for i in [1..#L] do 
+			hk := (Integers(p)!hk)^L[#L+1-i];
+		end for;
+		h_modp cat:= [hk];
+	end for;
+
+	// PH2
+	a_list := [];
+
+	for index in [1..#h_modp] do 
+		// initiations
+		gi := g_list[index];
+		hi := h_modp[index];
+		ord := factor[index];
+		n := f_power[index];
+		b := f_prime[index];
+		solution := [];
+
+		// define the power a as a polynomial
+		R := PolynomialRing(Integers(ord),n);
+		x := [R.i : i in [1..n]];
+		a := &+([x[j]*b^(j-1) : j in [1..n]]);
+		
+		// Resolve to find each x_i
+		for k in [1..n] do 
+			a_xk := a * b^(n-k);
+			a1 := x[k]*b^(n-1);
+			a2 := Integers()!(a_xk - a1);
+
+			// Apply bruteforce dLog
+			gk := gi^(b^(n-1));
+			hk := hi^(b^(n-k)) div gi^a2;
+			xk := BFdLog(gk,hk,p);
+			solution cat:= [xk];
+
+			// substitute the xk in a by the value found
+			a := Evaluate(a, solution cat [R.i : i in [(k+1)..n] ]);
+		end for;
+
+		// convert Polynomial type to integer
+		a := Integers()!a;
+		a_list cat:= [a];
+
+	end for;
+
+	// apply CRT to retrieve the solution
+	return CRT(a_list,factor);
+
+end function;
+
+// Recover the secret message
+function recoverMsg(Rpub,a,Apub,b,p,msg)
+	// recontruct the shared secred s = Rpub^b = Apub^a
+	
+	// compute first Rpub^b and Apub^a
+	L_b := [f[1]^f[2] : f in Factorization(b)];
+	L_a := [f[1]^f[2] : f in Factorization(a)];
+	s1 := Rpub;
+	s2 := Apub;
+
+	for i in [1..#L_b] do 
+		s1 := (Integers(p)!s1)^L_b[#L_b+1-i];
+	end for;
+
+	for j in [1..#L_a] do 
+		s2 := (Integers(p)!s2)^L_a[#L_a+1-j];
+	end for;
+
+	// check if Rpub^b = Apub^a
+	if s1 ne s2 then 
+		return false;
+	else
+		s := Integers()!s1;
+	end if;
+
+	// define alphabet list
+	alph := ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
+
+	// separate s digits by pair reduce mod 26 and retrieve the shared key
+	s_str := IntegerToString(s);
+	key :=[];
+	
+	for i in [1..#s_str-1] do 
+		if i mod 2 ne 0 then 
+			si := StringToInteger(s_str[i..i+1]);
+			key cat:= [si mod 26];
+		end if;
+	end for;
+	
+	// convert the ecrypted message in integers and retrieve message
+	message := "";
+	for i in [1..#msg] do 
+		ind := Index(alph,msg[i]) - key[i];
+		message cat:= alph[ind mod 26];
+	end for;
+
+	return message;
+
+end function;
+
+// Entries in terminal
+
+load"assignment2_variables.magma";
+
+a := mydLog(g1,Rpub,p1);
+a;
+b := mydLog(g1,Apub,p1);
+b;
+mydLog(g2,h2,p2);
+mydLog(g3,h3,p3);
+mydLog(g4,h4,p4);
+
+msg := "SWLDK";
+recoverMsg(Rpub,a,Apub,b,p1,msg);
