@@ -1,0 +1,13 @@
+zero:=VectorSpace(GF(2),32)!0;
+ones:=VectorSpace(GF(2),32)![1: i in [1..32]];
+ran:=VectorSpace(GF(2),32)![ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1 ];
+
+
+c1:=VectorSpace(GF(2),32)![ 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1 ];
+c2:=VectorSpace(GF(2),32)![ 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1 ];
+c3:=VectorSpace(GF(2),32)![ 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1 ];
+
+function GOSTtestvectors()
+
+return GOSTencrypt(zero) eq c1 and GOSTencrypt(ones) eq c2 and GOSTencrypt(ran) eq c3;
+end function; 

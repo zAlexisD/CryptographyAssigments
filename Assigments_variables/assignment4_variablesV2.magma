@@ -1,0 +1,17 @@
+S:=pmap<VectorSpace(GF(2), 4)-> VectorSpace(GF(2), 4) |
+Vector([ 0, 0, 0, 0 ]) -> Vector([ 0, 1, 1, 1 ]),
+Vector([ 1, 0, 0, 0 ]) -> Vector([ 1, 0, 0, 0 ]),
+Vector([ 0, 1, 0, 0 ]) -> Vector([ 1, 1, 0, 1 ]),
+Vector([ 1, 1, 0, 0 ]) -> Vector([ 1, 1, 1, 1 ]),
+Vector([ 0, 0, 1, 0 ]) -> Vector([ 0, 1, 0, 1 ]),
+Vector([ 1, 0, 1, 0 ]) -> Vector([ 0, 0, 0, 1 ]),
+Vector([ 0, 1, 1, 0 ]) -> Vector([ 0, 0, 0, 0 ]),
+Vector([ 1, 1, 1, 0 ]) -> Vector([ 0, 0, 1, 0 ]),
+Vector([ 0, 0, 0, 1 ]) -> Vector([ 1, 1, 1, 0 ]),
+Vector([ 1, 0, 0, 1 ]) -> Vector([ 1, 0, 1, 0 ]),
+Vector([ 0, 1, 0, 1 ]) -> Vector([ 0, 1, 1, 0 ]),
+Vector([ 1, 1, 0, 1 ]) -> Vector([ 1, 0, 1, 1 ]),
+Vector([ 0, 0, 1, 1 ]) -> Vector([ 1, 0, 0, 1 ]),
+Vector([ 1, 0, 1, 1 ]) -> Vector([ 1, 1, 0, 0 ]),
+Vector([ 0, 1, 1, 1 ]) -> Vector([ 0, 0, 1, 1 ]),
+Vector([ 1, 1, 1, 1 ]) -> Vector([ 0, 1, 0, 0 ])>;
